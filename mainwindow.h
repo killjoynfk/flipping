@@ -21,8 +21,9 @@ private:
 
     struct PanelData
     {
-        qreal angle   = 0.0;
-        bool  flipped = false;
+        qreal progress = 0.0; // 0..1 progress of the flip
+        qreal angle    = 0.0; // cached angle for painting
+        bool  flipped  = false;
     };
 
 
