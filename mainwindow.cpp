@@ -138,7 +138,8 @@ void MainWindow::paintEvent(QPaintEvent *)
         qreal dx      = origin.x() + panelW * 0.5 - windowW * 0.5;
         qreal dy      = origin.y() + panelH * 0.5 - windowH * 0.5;
         qreal xyDist  = std::hypot(dx, dy);
-        qreal xyF     = D / (D + xyDist / 10.0); // более мягкое влияние
+        qreal s       = qAbs(qSin(qDegreesToRadians(normAng)));
+        qreal xyF     = D / (D + xyDist / 10.0 * s); // более мягкое влияние
 
         qreal factor = depthF * xyF;
 
@@ -220,10 +221,11 @@ void MainWindow::paintEvent(QPaintEvent *)
 
             // 2) рисуем саму панель, маппя квадрат на произвольный четырёхугольник
             QTransform t;
-            QTransform::quadToQuad(srcQuad, dstQuad, t);
-            p.setTransform(t, /*combine=*/ false);
-            p.drawPixmap(0, 0, panelW, panelH, pix);
-            p.resetTransform();
+            if (QTransform::quadToQuad(srcQuad, dstQuad, t)) {
+                p.setTransform(t, /*combine=*/ false);
+                p.drawPixmap(0, 0, panelW, panelH, pix);
+                p.resetTransform();
+            }
         }
     }
 }
