@@ -24,6 +24,10 @@ private:
         qreal progress = 0.0; // 0..1 progress of the flip
         qreal angle    = 0.0; // cached angle for painting
         bool  flipped  = false;
+
+        // Parameters for post-flip oscillation
+        qreal swingAmplitude = 0.0; // in degrees
+        qreal swingPhase     = 0.0;
     };
 
 

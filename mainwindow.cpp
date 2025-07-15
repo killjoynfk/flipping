@@ -28,6 +28,8 @@ void MainWindow::startFlipAnimation()
         panel.progress = 0.0;
         panel.angle    = 0.0;
         panel.flipped  = false;
+        panel.swingAmplitude = 0.0;
+        panel.swingPhase     = 0.0;
     }
 
     m_animTimer.start();
@@ -57,6 +59,15 @@ void MainWindow::animateStep()
                 if (!panel.flipped && (panel.angle >= 90)) {
                     panel.flipped = true;
                 }
+                if (panel.progress >= 1.0) {
+                    panel.swingAmplitude = 30.0; // start swing in degrees
+                    panel.swingPhase     = 0.0;
+                }
+                allDone = false;
+            } else if (panel.swingAmplitude > 0.5) {
+                panel.swingPhase += 0.3;       // speed of oscillation
+                panel.swingAmplitude *= 0.90;  // damping
+                panel.angle = 180.0 + panel.swingAmplitude * qSin(panel.swingPhase);
                 allDone = false;
             }
         }
