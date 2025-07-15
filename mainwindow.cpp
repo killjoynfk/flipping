@@ -115,34 +115,28 @@ void MainWindow::paintEvent(QPaintEvent *)
     int         imgPH   = m_imageFrom.height() / m_rows;
 
     auto project = [&](qreal x, qreal y, qreal angleDeg, QPointF origin, bool top) -> QPointF {
-        // Для верхнего края проекция не меняется
         if (top) {
             return QPointF(origin.x() + x, origin.y() + y);
         }
 
-        // Поворот панели вокруг верхнего ребра по оси X
         qreal A    = qDegreesToRadians(angleDeg);
         qreal cosA = qCos(A);
         qreal sinA = qSin(A);
 
-        // Координаты точки после поворота в локальной системе
-        qreal X3 = x;
-        qreal Y3 = y * cosA;
-        qreal Z3 = y * sinA;
+        qreal z       = y * sinA;
+        qreal depthF  = D / (D + z);
 
-        // Камера располагается в центре окна на расстоянии D
-        qreal camX = windowW / 2.0;
-        qreal camY = windowH / 2.0;
+        qreal dx      = origin.x() + panelW * 0.5 - windowW * 0.5;
+        qreal dy      = origin.y() + panelH * 0.5 - windowH * 0.5;
+        qreal xyDist  = std::hypot(dx, dy);
+        qreal xyF     = D / (D + xyDist / 10.0); // более мягкое влияние
 
-        // Проецируем с учётом смещения камеры по X и Y
-        qreal factor = D / (D + Z3);
-        qreal worldX = origin.x() + X3;
-        qreal worldY = origin.y() + Y3;
+        qreal factor  = depthF * xyF;
 
-        qreal screenX = camX + (worldX - camX) * factor;
-        qreal screenY = camY + (worldY - camY) * factor;
+        qreal px = x * factor;
+        qreal py = y * cosA * xyF;
 
-        return QPointF(screenX, screenY);
+        return QPointF(origin.x() + px, origin.y() - py);
     };
 
     for (int row = 0; row < m_rows; ++row) {
