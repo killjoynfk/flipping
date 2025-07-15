@@ -114,29 +114,30 @@ void MainWindow::paintEvent(QPaintEvent *)
     int         imgPW   = m_imageFrom.width() / m_cols;
     int         imgPH   = m_imageFrom.height() / m_rows;
 
-    auto project = [&](qreal x, qreal y, qreal angleDeg, QPointF origin, bool top)->QPointF {
-                       if (top) {
-                           return QPointF(origin.x() + x,
-                                          origin.y() + y);
-                       }
+    auto project = [&](qreal x, qreal y, qreal angleDeg, QPointF origin, bool top) -> QPointF {
+        if (top) {
+            return QPointF(origin.x() + x, origin.y() + y);
+        }
 
-                       qreal A    = qDegreesToRadians(angleDeg);
-                       qreal cosA = qCos(A);
-                       qreal sinA = qSin(A);
+        qreal A    = qDegreesToRadians(angleDeg);
+        qreal cosA = qCos(A);
+        qreal sinA = qSin(A);
 
-                       // ось вращения — y=0 (верхний край), поэтому y идёт прямо
-                       qreal py = y * cosA;
+        qreal z       = y * sinA;
+        qreal depthF  = D / (D + z);
 
-                       // глубина = насколько точка «отклонена» вниз от верхнего ребра
-                       qreal pz = panelH * sinA;
+        qreal dx      = origin.x() + panelW * 0.5 - windowW * 0.5;
+        qreal dy      = origin.y() + panelH * 0.5 - windowH * 0.5;
+        qreal xyDist  = std::hypot(dx, dy);
+        qreal xyF     = D / (D + xyDist / 10.0); // более мягкое влияние
 
-                       // теперь factor = D / (D + pz)
-                       qreal factor = D / (D + pz);
+        qreal factor  = depthF * xyF;
 
-                       qreal px = x + factor * panelW * sinA;
-                       return QPointF(origin.x() + px,
-                                      origin.y() - py);
-                   };
+        qreal px = x * factor;
+        qreal py = y * cosA * xyF;
+
+        return QPointF(origin.x() + px, origin.y() - py);
+    };
 
     for (int row = 0; row < m_rows; ++row) {
         for (int col = 0; col < m_cols; ++col) {
@@ -185,6 +186,9 @@ void MainWindow::paintEvent(QPaintEvent *)
                 QPointF mid  = (a + b) * 0.5;
                 QPointF edge = b - a;
                 QPointF norm(-edge.y(), edge.x());
+                if (norm.y() < 0) {
+                    norm = -norm; // тень всегда вниз
+                }
                 norm /= std::hypot(norm.x(), norm.y());
                 qreal len = panelH * 0.3 * shadowStr;
 
