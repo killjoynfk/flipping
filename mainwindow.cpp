@@ -114,29 +114,36 @@ void MainWindow::paintEvent(QPaintEvent *)
     int         imgPW   = m_imageFrom.width() / m_cols;
     int         imgPH   = m_imageFrom.height() / m_rows;
 
-    auto project = [&](qreal x, qreal y, qreal angleDeg, QPointF origin, bool top)->QPointF {
-                       if (top) {
-                           return QPointF(origin.x() + x,
-                                          origin.y() + y);
-                       }
+    auto project = [&](qreal x, qreal y, qreal angleDeg, QPointF origin, bool top) -> QPointF {
+        // Для верхнего края проекция не меняется
+        if (top) {
+            return QPointF(origin.x() + x, origin.y() + y);
+        }
 
-                       qreal A    = qDegreesToRadians(angleDeg);
-                       qreal cosA = qCos(A);
-                       qreal sinA = qSin(A);
+        // Поворот панели вокруг верхнего ребра по оси X
+        qreal A    = qDegreesToRadians(angleDeg);
+        qreal cosA = qCos(A);
+        qreal sinA = qSin(A);
 
-                       // ось вращения — y=0 (верхний край), поэтому y идёт прямо
-                       qreal py = y * cosA;
+        // Координаты точки после поворота в локальной системе
+        qreal X3 = x;
+        qreal Y3 = y * cosA;
+        qreal Z3 = y * sinA;
 
-                       // глубина = насколько точка «отклонена» вниз от верхнего ребра
-                       qreal pz = panelH * sinA;
+        // Камера располагается в центре окна на расстоянии D
+        qreal camX = windowW / 2.0;
+        qreal camY = windowH / 2.0;
 
-                       // теперь factor = D / (D + pz)
-                       qreal factor = D / (D + pz);
+        // Проецируем с учётом смещения камеры по X и Y
+        qreal factor = D / (D + Z3);
+        qreal worldX = origin.x() + X3;
+        qreal worldY = origin.y() + Y3;
 
-                       qreal px = x + factor * panelW * sinA;
-                       return QPointF(origin.x() + px,
-                                      origin.y() - py);
-                   };
+        qreal screenX = camX + (worldX - camX) * factor;
+        qreal screenY = camY + (worldY - camY) * factor;
+
+        return QPointF(screenX, screenY);
+    };
 
     for (int row = 0; row < m_rows; ++row) {
         for (int col = 0; col < m_cols; ++col) {
@@ -185,6 +192,9 @@ void MainWindow::paintEvent(QPaintEvent *)
                 QPointF mid  = (a + b) * 0.5;
                 QPointF edge = b - a;
                 QPointF norm(-edge.y(), edge.x());
+                if (norm.y() < 0) {
+                    norm = -norm; // тень всегда вниз
+                }
                 norm /= std::hypot(norm.x(), norm.y());
                 qreal len = panelH * 0.3 * shadowStr;
 
