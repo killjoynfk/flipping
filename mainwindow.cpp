@@ -16,7 +16,7 @@ MainWindow::MainWindow(QWidget *parent)
 
     QTimer::singleShot(1000, this, &MainWindow::startFlipAnimation);
     connect(&m_animTimer, &QTimer::timeout, this, &MainWindow::animateStep);
-    m_animTimer.setInterval(16); // ~60 FPS
+    m_animTimer.setInterval(50); // ~60 FPS
 }
 
 void MainWindow::startFlipAnimation()
@@ -35,10 +35,10 @@ void MainWindow::startFlipAnimation()
 
 void MainWindow::animateStep()
 {
-    bool      allDone       = true;
-    const int delayPerPanel = 4;
-    const int totalSteps    = 40; // controls animation speed
-    const qreal step        = 1.0 / totalSteps;
+    bool        allDone       = true;
+    const int   delayPerPanel = 4;
+    const int   totalSteps    = 40; // controls animation speed
+    const qreal step          = 1.0 / totalSteps;
 
     for (int row = 0; row < m_rows; ++row) {
         for (int col = 0; col < m_cols; ++col) {
@@ -54,7 +54,7 @@ void MainWindow::animateStep()
                 qreal t    = panel.progress;
                 qreal ease = 0.5 * (1 - qCos(M_PI * t)); // ease-in-out
                 panel.angle = ease * 180.0;
-                if (!panel.flipped && panel.angle >= 90) {
+                if (!panel.flipped && (panel.angle >= 90)) {
                     panel.flipped = true;
                 }
                 allDone = false;
@@ -111,7 +111,7 @@ void MainWindow::paintEvent(QPaintEvent *)
 
     p.drawPixmap(rect(), m_imageFrom);
 
-    const qreal D       = 100.0;        // условное расстояние до «камеры»
+    const qreal D       = 200.0;        // условное расстояние до «камеры»
     int         windowW = width();
     int         windowH = height();
     double      panelW  = windowW / m_cols;
@@ -120,34 +120,34 @@ void MainWindow::paintEvent(QPaintEvent *)
     int         imgPH   = m_imageFrom.height() / m_rows;
 
     auto project = [&](qreal x, qreal y, qreal angleDeg, QPointF origin, bool top) -> QPointF {
-        if (top) {
-            return QPointF(origin.x() + x, origin.y() + y);
-        }
+                       if (top) {
+                           return QPointF(origin.x() + x, origin.y() + y);
+                       }
 
-        bool  inward   = angleDeg <= 90.0;
-        qreal normAng  = inward ? angleDeg : 180.0 - angleDeg; // 0..90
-        qreal sign     = inward ? 1.0 : -1.0;
+                       bool  inward  = angleDeg <= 90.0;
+                       qreal normAng = inward ? angleDeg : 180.0 - angleDeg; // 0..90
+                       qreal sign    = inward ? 1.0 : -1.0;
 
-        qreal A    = qDegreesToRadians(normAng);
-        qreal cosA = qCos(A);
-        qreal sinA = qSin(A);
+                       qreal A    = qDegreesToRadians(normAng);
+                       qreal cosA = qCos(A);
+                       qreal sinA = qSin(A);
 
-        qreal z      = y * sinA * sign;
-        qreal depthF = D / (D + z);
+                       qreal z      = y * sinA * sign;
+                       qreal depthF = D / (D + z);
 
-        qreal dx      = origin.x() + panelW * 0.5 - windowW * 0.5;
-        qreal dy      = origin.y() + panelH * 0.5 - windowH * 0.5;
-        qreal xyDist  = std::hypot(dx, dy);
-        qreal s       = qAbs(qSin(qDegreesToRadians(normAng)));
-        qreal xyF     = D / (D + xyDist / 10.0 * s); // более мягкое влияние
+                       qreal dx     = origin.x() + panelW * 0.5 - windowW * 0.5;
+                       qreal dy     = origin.y() + panelH * 0.5 - windowH * 0.5;
+                       qreal xyDist = std::hypot(dx, dy);
+                       qreal s      = qAbs(qSin(qDegreesToRadians(normAng)));
+                       qreal xyF    = D / (D + xyDist / 10.0 * s); // более мягкое влияние
 
-        qreal factor = depthF * xyF;
+                       qreal factor = depthF * xyF;
 
-        qreal px = x * factor;
-        qreal py = y * cosA * xyF;
+                       qreal px = x * factor;
+                       qreal py = y * cosA * xyF;
 
-        return QPointF(origin.x() + px, origin.y() - sign * py);
-    };
+                       return QPointF(origin.x() + px, origin.y() - sign * py);
+                   };
 
     for (int row = 0; row < m_rows; ++row) {
         for (int col = 0; col < m_cols; ++col) {
