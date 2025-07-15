@@ -16,7 +16,7 @@ MainWindow::MainWindow(QWidget *parent)
 
     QTimer::singleShot(1000, this, &MainWindow::startFlipAnimation);
     connect(&m_animTimer, &QTimer::timeout, this, &MainWindow::animateStep);
-    m_animTimer.setInterval(100); // ~60 FPS
+    m_animTimer.setInterval(16); // ~60 FPS
 }
 
 void MainWindow::startFlipAnimation()
@@ -25,8 +25,9 @@ void MainWindow::startFlipAnimation()
     m_animationTick = 0;
 
     for (auto& panel : m_panels) {
-        panel.angle   = 0.0;
-        panel.flipped = false;
+        panel.progress = 0.0;
+        panel.angle    = 0.0;
+        panel.flipped  = false;
     }
 
     m_animTimer.start();
@@ -34,9 +35,10 @@ void MainWindow::startFlipAnimation()
 
 void MainWindow::animateStep()
 {
-    bool        allDone       = true;
-    const int   delayPerPanel = 4;
-    const qreal stepPerTick   = 7.5;
+    bool      allDone       = true;
+    const int delayPerPanel = 4;
+    const int totalSteps    = 40; // controls animation speed
+    const qreal step        = 1.0 / totalSteps;
 
     for (int row = 0; row < m_rows; ++row) {
         for (int col = 0; col < m_cols; ++col) {
@@ -47,9 +49,12 @@ void MainWindow::animateStep()
                 continue;
             }
 
-            if (panel.angle < 180.0) {
-                panel.angle += stepPerTick;
-                if (!panel.flipped && (panel.angle >= 90)) {
+            if (panel.progress < 1.0) {
+                panel.progress = qMin(1.0, panel.progress + step);
+                qreal t    = panel.progress;
+                qreal ease = 0.5 * (1 - qCos(M_PI * t)); // ease-in-out
+                panel.angle = ease * 180.0;
+                if (!panel.flipped && panel.angle >= 90) {
                     panel.flipped = true;
                 }
                 allDone = false;
@@ -119,24 +124,28 @@ void MainWindow::paintEvent(QPaintEvent *)
             return QPointF(origin.x() + x, origin.y() + y);
         }
 
-        qreal A    = qDegreesToRadians(angleDeg);
+        bool  inward   = angleDeg <= 90.0;
+        qreal normAng  = inward ? angleDeg : 180.0 - angleDeg; // 0..90
+        qreal sign     = inward ? 1.0 : -1.0;
+
+        qreal A    = qDegreesToRadians(normAng);
         qreal cosA = qCos(A);
         qreal sinA = qSin(A);
 
-        qreal z       = y * sinA;
-        qreal depthF  = D / (D + z);
+        qreal z      = y * sinA * sign;
+        qreal depthF = D / (D + z);
 
         qreal dx      = origin.x() + panelW * 0.5 - windowW * 0.5;
         qreal dy      = origin.y() + panelH * 0.5 - windowH * 0.5;
         qreal xyDist  = std::hypot(dx, dy);
         qreal xyF     = D / (D + xyDist / 10.0); // более мягкое влияние
 
-        qreal factor  = depthF * xyF;
+        qreal factor = depthF * xyF;
 
         qreal px = x * factor;
         qreal py = y * cosA * xyF;
 
-        return QPointF(origin.x() + px, origin.y() - py);
+        return QPointF(origin.x() + px, origin.y() - sign * py);
     };
 
     for (int row = 0; row < m_rows; ++row) {
